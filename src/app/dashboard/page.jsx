@@ -1,71 +1,65 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, GeoPoint, doc, setDoc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  getDocs, 
+  getDoc,
+  query, 
+  where, 
+  orderBy, 
+  GeoPoint, 
+  doc, 
+  setDoc,
+  arrayUnion,
+  updateDoc
+} from 'firebase/firestore';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import '@/firebase';
-
-// List of major agricultural produces in India
-const agriProduces = [
-  'Cotton', 'Wheat', 'Rice', 'Sugarcane', 'Maize', 
-  'Barley', 'Mustard', 'Soybean', 'Groundnut', 'Jute', 
-  'Pulses', 'Banana', 'Apple', 'Tomato', 'Onion', 
-  'Mango', 'Potato', 'Garlic', 'Chili', 'Tea'
-];
-
-// Dummy farmer data with location coordinates for distance calculation
-const dummyFarmers = [
-  { name: 'Ramesh Singh', location: 'Pune', product: 'Wheat', coordinates: { lat: 18.5204, lng: 73.8567 } },
-  { name: 'Suresh Kumar', location: 'Nagpur', product: 'Rice', coordinates: { lat: 21.1458, lng: 79.0882 } },
-  { name: 'Amit Patel', location: 'Mumbai', product: 'Cotton', coordinates: { lat: 19.0760, lng: 72.8777 } },
-  { name: 'Rajesh Verma', location: 'Delhi', product: 'Tomato', coordinates: { lat: 28.7041, lng: 77.1025 } },
-  { name: 'Manoj Gupta', location: 'Bangalore', product: 'Onion', coordinates: { lat: 12.9716, lng: 77.5946 } },
-  { name: 'Vijay Sharma', location: 'Chennai', product: 'Wheat', coordinates: { lat: 13.0827, lng: 80.2707 } },
-  { name: 'Sanjay Yadav', location: 'Kolkata', product: 'Maize', coordinates: { lat: 22.5726, lng: 88.3639 } },
-  { name: 'Prakash Joshi', location: 'Hyderabad', product: 'Sugarcane', coordinates: { lat: 17.3850, lng: 78.4867 } },
-  { name: 'Dinesh Tiwari', location: 'Jaipur', product: 'Potato', coordinates: { lat: 26.9124, lng: 75.7873 } },
-  { name: 'Rakesh Mishra', location: 'Ahmedabad', product: 'Groundnut', coordinates: { lat: 23.0225, lng: 72.5714 } },
-  { name: 'Mukesh Agarwal', location: 'Lucknow', product: 'Mango', coordinates: { lat: 26.8467, lng: 80.9462 } },
-  { name: 'Anand Kulkarni', location: 'Bhopal', product: 'Soybean', coordinates: { lat: 23.2599, lng: 77.4126 } },
-  { name: 'Kiran Reddy', location: 'Chandigarh', product: 'Apple', coordinates: { lat: 30.7333, lng: 76.7794 } },
-  { name: 'Ganesh Nair', location: 'Kochi', product: 'Banana', coordinates: { lat: 9.9312, lng: 76.2673 } },
-  { name: 'Sunil Patil', location: 'Indore', product: 'Garlic', coordinates: { lat: 22.7196, lng: 75.8577 } }
-];
-
-// Dummy business data with location coordinates for distance calculation
-const dummyBusinesses = [
-  { name: 'AgroCorp Ltd.', location: 'Chennai', product: 'Wheat', coordinates: { lat: 13.0827, lng: 80.2707 } },
-  { name: 'FreshMart Industries', location: 'Kolkata', product: 'Rice', coordinates: { lat: 22.5726, lng: 88.3639 } },
-  { name: 'Cotton Traders Inc.', location: 'Hyderabad', product: 'Cotton', coordinates: { lat: 17.3850, lng: 78.4867 } },
-  { name: 'Veggie Hub Exports', location: 'Ahmedabad', product: 'Tomato', coordinates: { lat: 23.0225, lng: 72.5714 } },
-  { name: 'SpiceMart Global', location: 'Jaipur', product: 'Onion', coordinates: { lat: 26.9124, lng: 75.7873 } },
-  { name: 'Hindustan Foods', location: 'Mumbai', product: 'Potato', coordinates: { lat: 19.0760, lng: 72.8777 } },
-  { name: 'Bharat Agro Processors', location: 'Delhi', product: 'Maize', coordinates: { lat: 28.7041, lng: 77.1025 } },
-  { name: 'Kisan Seva Corp', location: 'Bangalore', product: 'Sugarcane', coordinates: { lat: 12.9716, lng: 77.5946 } },
-  { name: 'Indian Farmers Collective', location: 'Pune', product: 'Groundnut', coordinates: { lat: 18.5204, lng: 73.8567 } },
-  { name: 'Fruit Express Ltd', location: 'Nagpur', product: 'Mango', coordinates: { lat: 21.1458, lng: 79.0882 } },
-  { name: 'GrainMart Processing', location: 'Lucknow', product: 'Wheat', coordinates: { lat: 26.8467, lng: 80.9462 } },
-  { name: 'Organic India Pvt Ltd', location: 'Bhopal', product: 'Soybean', coordinates: { lat: 23.2599, lng: 77.4126 } },
-  { name: 'Himalayan Produce Co', location: 'Chandigarh', product: 'Apple', coordinates: { lat: 30.7333, lng: 76.7794 } },
-  { name: 'South Indian Exports', location: 'Kochi', product: 'Banana', coordinates: { lat: 9.9312, lng: 76.2673 } },
-  { name: 'Spice Traders United', location: 'Indore', product: 'Garlic', coordinates: { lat: 22.7196, lng: 75.8577 } }
-];
 
 export default function Dashboard() {
   const [isFarmer, setIsFarmer] = useState(true);
-  const [selectedProduce, setSelectedProduce] = useState('');
+  const [selectedProducts, setSelectedProducts] = useState([]);
   const [customProduce, setCustomProduce] = useState('');
   const [listings, setListings] = useState([]);
-  const [userLocation, setUserLocation] = useState(null);
+  const [userGeoLocation, setUserGeoLocation] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [produces, setProduces] = useState([]);
+  const [userProducts, setUserProducts] = useState([]);
+  
+  // User information
+  const [userName, setUserName] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
+  const [location, setLocation] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [userInfoLoaded, setUserInfoLoaded] = useState(false);
+  const [activeProduct, setActiveProduct] = useState('');
+
   const db = getFirestore();
   const auth = getAuth();
 
-  // Get user's location on component mount
+  // Get user's authentication and load user info
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserEmail(user.email);
+        fetchUserInfo(user.email);
+        fetchUserProducts(user.uid);
+      } else {
+        console.log('User is not logged in');
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Get user's location and load products on component mount
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setUserLocation({
+          setUserGeoLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude
           });
@@ -73,37 +67,80 @@ export default function Dashboard() {
         (error) => {
           console.error("Error getting location:", error);
           // Default to center of India if location access is denied
-          setUserLocation({ lat: 20.5937, lng: 78.9629 });
+          setUserGeoLocation({ lat: 20.5937, lng: 78.9629 });
         }
       );
     }
     
-    // Initialize products in Firebase if they don't exist yet
-    initializeProducts();
+    // Load products from Firebase
+    fetchProducts();
   }, []);
 
   // Fetch listings when user toggles between farmer/businessman or selects a product
   useEffect(() => {
-    if (selectedProduce) {
+    if (activeProduct && userInfoLoaded) {
       fetchListings();
     }
-  }, [isFarmer, selectedProduce, userLocation]);
+  }, [isFarmer, activeProduct, userGeoLocation, userInfoLoaded]);
 
-  // Initialize the products collection in Firebase with default agri produces
-  const initializeProducts = async () => {
+  // Fetch user info from UserInfo table
+  const fetchUserInfo = async (email) => {
     try {
+      const userInfoRef = collection(db, 'UserInfo');
+      const q = query(userInfoRef, where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const userData = querySnapshot.docs[0].data();
+        setUserName(userData.name || '');
+        setContactNumber(userData.contactNumber || '');
+        setUserInfoLoaded(true);
+      } else {
+        console.log('User not found in UserInfo table');
+      }
+    } catch (error) {
+      console.error('Error fetching user info:', error);
+    }
+  };
+
+  // Fetch user's products from appropriate collection
+  const fetchUserProducts = async (userId) => {
+    try {
+      // Check in both collections
+      const farmerRef = doc(db, 'farmersinfo', userId);
+      const businessRef = doc(db, 'businessinfo', userId);
+      
+      const farmerDoc = await getDoc(farmerRef);
+      const businessDoc = await getDoc(businessRef);
+      
+      const farmerProducts = farmerDoc.exists() && farmerDoc.data().products ? farmerDoc.data().products : [];
+      const businessProducts = businessDoc.exists() && businessDoc.data().products ? businessDoc.data().products : [];
+      
+      // Combine all user products
+      const allUserProducts = [...new Set([...farmerProducts, ...businessProducts])];
+      setUserProducts(allUserProducts);
+    } catch (error) {
+      console.error('Error fetching user products:', error);
+    }
+  };
+
+  // Fetch products from Firebase
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
       const productsRef = collection(db, 'products');
       const snapshot = await getDocs(productsRef);
       
-      // Only add products if the collection is empty
-      if (snapshot.empty) {
-        for (const produce of agriProduces) {
-          await addDoc(productsRef, { name: produce });
-        }
-        console.log('Products initialized in Firebase');
+      if (!snapshot.empty) {
+        const productsData = snapshot.docs.map(doc => doc.data().name);
+        setProduces(productsData);
+      } else {
+        console.log('No products found in Firebase');
       }
     } catch (error) {
-      console.error('Error initializing products:', error);
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -123,34 +160,47 @@ export default function Dashboard() {
   };
 
   const fetchListings = async () => {
-    if (!selectedProduce) return;
+    if (!activeProduct) return;
     
     setLoading(true);
     try {
-      const collectionName = isFarmer ? 'businesses' : 'farmers';
-      const q = query(collection(db, collectionName), where('product', '==', selectedProduce));
+      // Determine which collection to query based on user type
+      const collectionName = isFarmer ? 'businessinfo' : 'farmersinfo';
+      const q = query(collection(db, collectionName), where('products', 'array-contains', activeProduct));
       const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
       
-      // If no data in Firebase, use dummy data filtered by selected produce
-      let filteredData = data.length > 0 ? data : 
-        (isFarmer ? 
-          dummyBusinesses.filter(b => b.product === selectedProduce) : 
-          dummyFarmers.filter(f => f.product === selectedProduce)
-        );
+      // Process Firestore data
+      const data = querySnapshot.docs.map(doc => {
+        const docData = doc.data();
+        // Convert GeoPoint to regular coordinates object if needed
+        let coordinates = docData.coordinates;
+        if (coordinates && coordinates.latitude) {
+          coordinates = {
+            lat: coordinates.latitude,
+            lng: coordinates.longitude
+          };
+        }
+        
+        return {
+          id: doc.id,
+          ...docData,
+          coordinates
+        };
+      });
       
       // Sort by distance if user location is available
-      if (userLocation) {
-        filteredData = filteredData.map(item => ({
+      if (userGeoLocation && data.length > 0) {
+        const dataWithDistance = data.map(item => ({
           ...item,
-          distance: calculateDistance(userLocation, item.coordinates)
-        })).sort((a, b) => a.distance - b.distance);
+          distance: calculateDistance(userGeoLocation, item.coordinates)
+        }));
+        
+        // Sort by distance (nearest first)
+        dataWithDistance.sort((a, b) => a.distance - b.distance);
+        setListings(dataWithDistance);
+      } else {
+        setListings(data);
       }
-      
-      setListings(filteredData);
     } catch (error) {
       console.error('Error fetching listings:', error);
     } finally {
@@ -158,36 +208,96 @@ export default function Dashboard() {
     }
   };
 
+  const handleProductChange = (e) => {
+    const value = e.target.value;
+    if (value === '') return;
+    
+    if (value === 'other') {
+      // Do nothing here, the custom input field will handle this
+    } else if (!selectedProducts.includes(value)) {
+      setSelectedProducts([...selectedProducts, value]);
+    }
+  };
+
+  const handleAddCustomProduct = () => {
+    if (!customProduce.trim()) return;
+    
+    // Check if product already exists in the main products list
+    if (produces.some(p => p.toLowerCase() === customProduce.trim().toLowerCase())) {
+      alert('This product already exists in the list. Please select it from the dropdown.');
+      return;
+    }
+    
+    // Add to selected products
+    if (!selectedProducts.includes(customProduce.trim())) {
+      setSelectedProducts([...selectedProducts, customProduce.trim()]);
+      setCustomProduce('');
+    }
+  };
+
+  const removeProduct = (product) => {
+    setSelectedProducts(selectedProducts.filter(p => p !== product));
+  };
+
+  const handleViewListings = (product) => {
+    setActiveProduct(product);
+  };
+
   const handleSubmit = async () => {
+    if (!location.trim()) {
+      alert('Please enter your location');
+      return;
+    }
+
+    if (selectedProducts.length === 0) {
+      alert('Please select at least one product');
+      return;
+    }
+
     try {
-      if (selectedProduce === 'other' && customProduce.trim()) {
-        // Add new produce to products collection
-        const docRef = await addDoc(collection(db, 'products'), { name: customProduce.trim() });
-        console.log('New produce added with ID:', docRef.id);
-        
-        // Update selected produce to the custom one
-        setSelectedProduce(customProduce.trim());
-        setCustomProduce('');
+      // Add any new custom products to the products collection
+      const customProducts = selectedProducts.filter(p => !produces.includes(p));
+      
+      for (const newProduce of customProducts) {
+        await addDoc(collection(db, 'products'), { name: newProduce.trim() });
       }
       
-      // Also add the current user's information to the appropriate collection
+      if (customProducts.length > 0) {
+        // Refresh products list after adding new ones
+        fetchProducts();
+      }
+      
+      // Add or update the current user's information to the appropriate collection
       if (auth.currentUser) {
-        const userCollection = isFarmer ? 'farmers' : 'businesses';
+        const userCollection = isFarmer ? 'farmersinfo' : 'businessinfo';
         const userRef = doc(collection(db, userCollection), auth.currentUser.uid);
         
-        await setDoc(userRef, {
-          name: auth.currentUser.displayName || 'Anonymous User',
-          location: 'Unknown Location', // This would ideally come from a form
-          product: selectedProduce === 'other' ? customProduce.trim() : selectedProduce,
+        const userData = {
+          name: userName,
+          contactNumber: contactNumber,
+          email: userEmail,
+          location: location.trim(),
+          products: selectedProducts,
           userId: auth.currentUser.uid,
-          coordinates: userLocation ? new GeoPoint(userLocation.lat, userLocation.lng) : null,
+          coordinates: userGeoLocation ? new GeoPoint(userGeoLocation.lat, userGeoLocation.lng) : null,
           timestamp: new Date()
-        });
+        };
+        
+        await setDoc(userRef, userData);
+
+        // Update user products in state
+        setUserProducts([...new Set([...userProducts, ...selectedProducts])]);
+        
+        // Set active product to first selected product to show listings
+        if (selectedProducts.length > 0 && !activeProduct) {
+          setActiveProduct(selectedProducts[0]);
+        }
+        
+        alert(`Your ${isFarmer ? 'selling' : 'buying'} information has been updated!`);
       }
-      
-      fetchListings();
     } catch (error) {
       console.error('Error submitting data:', error);
+      alert('Error submitting data. Please try again.');
     }
   };
 
@@ -217,59 +327,172 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* User Information Display */}
+      <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
+        <h2 className="text-xl font-semibold mb-4">Your Information</h2>
+        
+        {userInfoLoaded ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-gray-700"><strong>Name:</strong> {userName}</p>
+              <p className="text-gray-700"><strong>Contact:</strong> {contactNumber}</p>
+            </div>
+            <div>
+              <p className="text-gray-700"><strong>Email:</strong> {userEmail}</p>
+              {userProducts.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-gray-700"><strong>Your Products:</strong></p>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {userProducts.map((product, idx) => (
+                      <span 
+                        key={idx} 
+                        className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm cursor-pointer hover:bg-green-200"
+                        onClick={() => handleViewListings(product)}
+                      >
+                        {product}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-green-500"></div>
+          </div>
+        )}
+      </div>
+
       {/* Selection Panel */}
       <div className="bg-white p-6 rounded-lg shadow-lg">
         <h2 className="text-xl font-semibold mb-4">
           {isFarmer ? 'What do you want to sell?' : 'What do you want to buy?'}
         </h2>
         
-        <select 
-          value={selectedProduce}
-          onChange={(e) => setSelectedProduce(e.target.value)} 
-          className="w-full p-3 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
-        >
-          <option value="">Select a produce</option>
-          {agriProduces.map((produce, index) => (
-            <option key={index} value={produce}>{produce}</option>
-          ))}
-          <option value="other">Other (Specify)</option>
-        </select>
-        
-        {selectedProduce === 'other' && (
-          <div className="mt-3">
+        <div className="mb-4">
+          {loading && produces.length === 0 ? (
+            <div className="flex justify-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-green-500"></div>
+            </div>
+          ) : (
+            <div className="flex space-x-2">
+              <select 
+                value=""
+                onChange={handleProductChange} 
+                className="flex-1 p-3 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="">Add a product</option>
+                {produces.map((produce, index) => (
+                  <option key={index} value={produce}>{produce}</option>
+                ))}
+                <option value="other">Other (Specify)</option>
+              </select>
+            </div>
+          )}
+          
+          {/* Custom produce input */}
+          <div className="flex space-x-2 mt-3">
             <input 
               type="text" 
-              placeholder="Enter new produce name" 
+              placeholder="Enter a new product name" 
               value={customProduce}
               onChange={(e) => setCustomProduce(e.target.value)} 
-              className="w-full p-3 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500" 
+              className="flex-1 p-3 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500" 
             />
+            <button 
+              onClick={handleAddCustomProduct}
+              disabled={!customProduce.trim()}
+              className={`px-4 py-3 rounded-lg font-medium ${
+                !customProduce.trim() 
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+            >
+              Add
+            </button>
           </div>
-        )}
+          
+          {/* Selected products display */}
+          {selectedProducts.length > 0 && (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">Selected Products:</p>
+              <div className="flex flex-wrap gap-2">
+                {selectedProducts.map((product, idx) => (
+                  <div 
+                    key={idx} 
+                    className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm flex items-center"
+                  >
+                    {product}
+                    <button 
+                      onClick={() => removeProduct(product)}
+                      className="ml-2 text-green-800 hover:text-red-600"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="mt-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Your Location</label>
+          <input 
+            type="text" 
+            placeholder="Enter your location (city, state)" 
+            value={location}
+            onChange={(e) => setLocation(e.target.value)} 
+            className="w-full p-3 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500" 
+            required
+          />
+        </div>
         
         <button 
           onClick={handleSubmit} 
-          disabled={!selectedProduce || (selectedProduce === 'other' && !customProduce.trim())}
+          disabled={selectedProducts.length === 0 || !location.trim()}
           className={`w-full py-3 rounded-lg mt-4 font-medium transition-colors ${
-            (!selectedProduce || (selectedProduce === 'other' && !customProduce.trim())) 
+            (selectedProducts.length === 0 || !location.trim()) 
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
               : 'bg-green-600 text-white hover:bg-green-700'
           }`}
         >
-          Find {isFarmer ? 'Buyers' : 'Sellers'}
+          Submit {isFarmer ? 'Selling' : 'Buying'} Information
         </button>
       </div>
 
       {/* Results Section */}
       <div className="mt-6">
         <h3 className="text-lg font-semibold mb-4">
-          {selectedProduce ? 
-            `Available ${isFarmer ? 'Businesses' : 'Farmers'} for ${selectedProduce}` : 
-            `Select a produce to see available ${isFarmer ? 'businesses' : 'farmers'}`
+          {activeProduct ? 
+            `Available ${isFarmer ? 'Businesses' : 'Farmers'} for ${activeProduct}` : 
+            `Select a product to see available ${isFarmer ? 'businesses' : 'farmers'}`
           }
         </h3>
         
-        {loading ? (
+        {userProducts.length > 0 && (
+          <div className="mb-4">
+            <p className="text-sm font-medium text-gray-700 mb-2">View listings for:</p>
+            <div className="flex flex-wrap gap-2">
+              {userProducts.map((product, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleViewListings(product)}
+                  className={`px-3 py-1 rounded-full text-sm ${
+                    activeProduct === product
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                  }`}
+                >
+                  {product}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {loading && activeProduct ? (
           <div className="flex justify-center p-8">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
           </div>
@@ -286,24 +509,29 @@ export default function Dashboard() {
                   )}
                 </div>
                 <p className="text-gray-600 mt-1"><strong>Location:</strong> {item.location}</p>
-                <p className="mt-2 text-gray-700">
-                  <span className="font-medium">
-                    {isFarmer ? 'Wants to Buy' : 'Wants to Sell'}:
-                  </span> 
-                  <span className="ml-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                    {item.product}
-                  </span>
-                </p>
+                <p className="text-gray-600"><strong>Contact:</strong> {item.contactNumber}</p>
+                <div className="mt-2">
+                  <p className="font-medium text-gray-700">
+                    {isFarmer ? 'Wants to Buy:' : 'Offers:'}
+                  </p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {item.products && item.products.map((product, idx) => (
+                      <span key={idx} className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                        {product}
+                      </span>
+                    ))}
+                  </div>
+                </div>
                 <button className="mt-3 w-full py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors">
                   Contact
                 </button>
               </div>
             ))}
           </div>
-        ) : selectedProduce ? (
+        ) : activeProduct ? (
           <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-center">
-            <p className="text-yellow-700">No listings found for {selectedProduce}.</p>
-            <p className="text-sm text-yellow-600 mt-1">Try selecting a different produce or check back later.</p>
+            <p className="text-yellow-700">No listings found for {activeProduct}.</p>
+            <p className="text-sm text-yellow-600 mt-1">Try selecting a different product or check back later.</p>
           </div>
         ) : null}
       </div>
