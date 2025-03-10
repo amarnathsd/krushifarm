@@ -1,10 +1,10 @@
 "use client"
 import React from "react";
 
-const FarmToMarketSection = () => {
+const WhatWeDo = () => {
   return (
-    <section className="text-primary py-12 px-6 space-y-[8vh]">
-      <div className="max-w-5xl mx-auto text-center w-5/12 space-y-[3vh]">
+    <section className="text-primary py-12 px-3 md:px-6 space-y-[8vh]">
+      <div className="max-w-5xl mx-auto text-center md:w-5/12 space-y-[3vh]">
         <h2 className="text-3xl font-bold text-primary">What We Do</h2>
         <p className=" mt-2">
         A smarter, fairer way to connect farmers and businesses directly eliminating middlemen to ensure fresh, high-quality produce at fair prices for all
@@ -144,4 +144,4 @@ const FeatureCard = ({ icon, title, description }) => {
   );
 };
 
-export default FarmToMarketSection;
+export default WhatWeDo;

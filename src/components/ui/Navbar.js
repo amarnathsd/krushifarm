@@ -2,10 +2,16 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-// import Logo from "assets/images/Logo.svg"
+import { useRouter } from "next/navigation"; // Updated import for Next.js 13+
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const router = useRouter(); // Initialize useRouter
+
+  // Function to navigate to a specific route
+  const NavigateTo = (route) => {
+    router.push("/" + route); // Use the route passed as a parameter
+  };
 
   return (
     <nav className="sticky top-0 z-50 flex items-center justify-between px-6 py-3 bg-black/10 shadow-md">
@@ -40,9 +46,12 @@ const Navbar = () => {
         <button className="bg-green-900 text-white px-4 py-2 rounded-lg">
           Contact Us
         </button>
-        {/* <button className="bg-green-900 text-white px-4 py-2 rounded-lg">
+        <button
+          onClick={() => NavigateTo("signup")} // Pass the route as an argument
+          className="bg-green-900 text-white px-4 py-2 rounded-lg"
+        >
           Get Started
-        </button> */}
+        </button>
       </div>
 
       {/* Hamburger Icon (Mobile) */}
@@ -75,7 +84,10 @@ const Navbar = () => {
               </button>
             </li>
             <li>
-              <button className="bg-green-900 text-white px-4 py-2 rounded-lg">
+              <button
+                onClick={() => NavigateTo("signup")} // Pass the route as an argument
+                className="bg-green-900 text-white px-4 py-2 rounded-lg"
+              >
                 Get Started
               </button>
             </li>
