@@ -48,10 +48,16 @@ const LandingPage = () => {
               businesses grow together.
             </p>
             <div className="flex justify-center md:justify-end mt-5 gap-4">
-              <button className="bg-secondary text-primary font-semibold px-4 py-3 md:px-8 md:py-4 rounded-lg md:text-xl">
+              <button
+                onClick={() => NavigateTo("contactus")}
+                className="bg-secondary text-primary font-semibold px-4 py-3 md:px-8 md:py-4 rounded-lg md:text-xl"
+              >
                 Contact Us
               </button>
-              <button className="bg-secondary text-primary font-semibold px-4 py-3 md:px-8 md:py-4 rounded-lg md:text-xl">
+              <button
+                onClick={() => NavigateTo("signup")}
+                className="bg-secondary text-primary font-semibold px-4 py-3 md:px-8 md:py-4 rounded-lg md:text-xl"
+              >
                 Sign Up
               </button>
             </div>

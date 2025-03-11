@@ -28,22 +28,25 @@ const Navbar = () => {
       {/* Desktop Nav Links */}
       <ul className="hidden md:flex space-x-6 text-green-900 font-semibold">
         <li>
-          <Link href="#">Home</Link>
+          <Link href="/">Home</Link>
         </li>
         <li>
-          <Link href="#">Vision</Link>
+          <Link href="/">Vision</Link>
         </li>
         <li>
-          <Link href="#">Farmer</Link>
+          <Link href="/">Farmer</Link>
         </li>
         <li>
-          <Link href="#">Business</Link>
+          <Link href="/">Business</Link>
         </li>
       </ul>
 
       {/* Buttons (Desktop) */}
       <div className="hidden md:flex space-x-4">
-        <button className="bg-green-900 text-white px-4 py-2 rounded-lg">
+        <button
+          onClick={() => NavigateTo("contactus")}
+          className="bg-green-900 text-white px-4 py-2 rounded-lg"
+        >
           Contact Us
         </button>
         <button
@@ -79,8 +82,11 @@ const Navbar = () => {
               <Link href="#">Business</Link>
             </li>
             <li>
-              <button className="bg-green-900 text-white px-4 py-2 rounded-lg">
-                Login
+              <button
+                onClick={() => NavigateTo("contactus")}
+                className="bg-green-900 text-white px-4 py-2 rounded-lg"
+              >
+                Contact Us
               </button>
             </li>
             <li>
